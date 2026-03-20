@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupp-Pomodoro</title>
+</head>
+<body>
+    <h1>Synkad Pomodoro</h1>
+    
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="room-input" placeholder="Ange rumnamn (t.ex. grupp1)">
+        <button id="join-btn">Gå med i rum</button>
+        <span id="current-room-text" style="margin-left: 10px; color: green;"></span>
+    </div>
+
+    <div>
+        <h3 id="mode-display" style="color: #555;">Gå med i ett rum för att börja</h3>
+        
+        <h2 id="timer-display" style="font-size: 48px; margin: 10px 0;">25:00</h2>
+        <button id="start-btn">Starta timer</button>
+    </div>
+
+    <audio id="alarm-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
