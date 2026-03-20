@@ -38,7 +38,7 @@ io.on('connection', (socket) => {
 
     const mode = rooms[roomId].nextMode;
     // 25 minuter för fokus, 5 minuter för rast
-    const duration = mode === 'focus' ? 25 * 60 * 1000 : 5 * 60 * 1000; 
+    const duration = mode === 'focus' ? 5 * 1 * 1000 : 3 * 1 * 1000; 
     const endTime = Date.now() + duration;
     
     rooms[roomId].endTime = endTime;
