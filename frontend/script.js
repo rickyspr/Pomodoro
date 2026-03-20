@@ -1,4 +1,4 @@
-const socket = io('http://localhost:3000');
+const socket = io('https://grupp-pomodoro-server.onrender.com');
 
 const roomInput = document.getElementById('room-input');
 const joinBtn = document.getElementById('join-btn');
