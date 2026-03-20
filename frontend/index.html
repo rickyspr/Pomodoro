@@ -3,27 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grupp-Pomodoro</title>
+    <title>25:00 - Synkad Pomodoro</title>
+    
+    <style>
+        /* Grundinställningar för hela sidan */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ett snyggare, modernt typsnitt */
+            background-color: #1a1a2e; /* Mörkblå bakgrund */
+            color: white; /* Vit text */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centrerar allt innehåll horisontellt */
+            justify-content: center;
+            min-height: 100vh; /* Tar upp hela skärmens höjd */
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            color: #e94560; /* En röd accentfärg för titeln */
+        }
+
+        /* En liten beskrivningstext under titeln */
+        .subtitle {
+            color: #888;
+            margin-top: 0;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        /* Design för rums-sektionen */
+        .room-controls {
+            background-color: #16213e; /* Lite ljusare mörkblå för kortet */
+            padding: 20px;
+            border-radius: 10px; /* Rundade hörn */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* En liten skugga för djup */
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 400px; /* Gör att det inte blir för brett på stora skärmar */
+            text-align: center;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #0f3460;
+            background-color: #0f3460;
+            color: white;
+            width: 70%;
+            margin-right: 10px;
+        }
+
+        /* Grunddesign för alla knappar */
+        button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s; /* En mjuk övergång vid hover */
+        }
+
+        /* Specifik design för "Gå med"-knappen */
+        #join-btn {
+            background-color: #0f3460;
+            color: white;
+        }
+
+        #join-btn:hover {
+            background-color: #e94560; /* Blir röd när man håller musen över */
+        }
+
+        /* Design för status-texten "Du är i rum..." */
+        #current-room-text {
+            display: block; /* Lägger den på en egen rad */
+            margin-top: 15px;
+            color: #4caf50; /* Grön färg */
+            font-weight: bold;
+        }
+
+        /* Design för timer-sektionen */
+        .timer-container {
+            background-color: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        #mode-display {
+            margin-top: 0;
+            color: #888;
+            font-size: 1.1em;
+        }
+
+        /* Jättestor design för själva klockan */
+        #timer-display {
+            font-size: 80px;
+            font-weight: bold;
+            margin: 20px 0;
+            font-family: 'Courier New', Courier, monospace; /* Monospace passar bra för klockor */
+            letter-spacing: -2px;
+        }
+
+        /* Design för den stora "Starta timer"-knappen */
+        #start-btn {
+            background-color: #e94560; /* Röd accentfärg */
+            color: white;
+            font-size: 1.2em;
+            width: 100%;
+            padding: 15px;
+        }
+
+        #start-btn:hover {
+            background-color: #ff5e78; /* Lite ljusare röd vid hover */
+        }
+
+        /* Design när knappen är inaktiverad (medan timern körs) */
+        #start-btn:disabled {
+            background-color: #555;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <h1>Synkad Pomodoro</h1>
+    <p class="subtitle">Gemensam Tidshantering för Grupper</p>
     
-    <div style="margin-bottom: 20px;">
+    <div class="room-controls">
         <input type="text" id="room-input" placeholder="Ange rumnamn (t.ex. grupp1)">
-        <button id="join-btn">Gå med i rum</button>
-        <span id="current-room-text" style="margin-left: 10px; color: green;"></span>
+        <button id="join-btn">Gå med</button>
+        <span id="current-room-text"></span>
     </div>
 
-    <div>
-        <h3 id="mode-display" style="color: #555;">Gå med i ett rum för att börja</h3>
-        
-        <h2 id="timer-display" style="font-size: 48px; margin: 10px 0;">25:00</h2>
+    <div class="timer-container">
+        <h3 id="mode-display">Gå med i ett rum för att börja</h3>
+        <h2 id="timer-display">25:00</h2>
         <button id="start-btn">Starta timer</button>
     </div>
 
-    <audio id="alarm-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-
-    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+    <audio id="alarm-sound" src="
