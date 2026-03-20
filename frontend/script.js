@@ -27,25 +27,27 @@ startBtn.addEventListener('click', () => {
     }
 });
 
-// Lyssna efter signal om att klockan står still (t.ex. när man just anslutit)
 socket.on('timer-stopped', (nextMode) => {
     clearInterval(timerInterval);
-    startBtn.disabled = false; // Se till att knappen går att klicka på
+    startBtn.disabled = false;
     
     if (nextMode === 'focus') {
         modeDisplay.innerText = "Redo för Fokus (25 min)";
         timerDisplay.innerText = "25:00";
+        document.title = "25:00 - Redo för Fokus"; // Uppdaterar fliken
     } else {
         modeDisplay.innerText = "Redo för Rast (5 min)";
         timerDisplay.innerText = "05:00";
+        document.title = "05:00 - Redo för Rast"; // Uppdaterar fliken
     }
 });
 
-// Lyssna efter signal om att klockan har startat
 socket.on('timer-started', (data) => {
     clearInterval(timerInterval);
-    startBtn.disabled = true; // Stäng av startknappen så man inte råkar klicka flera gånger
+    startBtn.disabled = true;
     
+    const modeText = data.mode === 'focus' ? 'Fokus' : 'Rast';
+
     if (data.mode === 'focus') {
         modeDisplay.innerText = "🔥 Fokus pågår...";
     } else {
@@ -55,34 +57,32 @@ socket.on('timer-started', (data) => {
     timerInterval = setInterval(() => {
         const timeLeft = data.endTime - Date.now();
 
-        // NÄR TIDEN ÄR UTE
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
             timerDisplay.innerText = "00:00";
+            document.title = "Tiden är ute! 🔔"; // Fliken blinkar till mentalt med en klocka
             
-            // Spela upp pling-ljudet!
             alarmSound.play();
-            
-            // Aktivera startknappen igen
             startBtn.disabled = false;
             
-            // Berätta för användarna vad som väntar härnäst
             if (data.mode === 'focus') {
                  modeDisplay.innerText = "Fokus klart! Klicka start för Rast.";
             } else {
                  modeDisplay.innerText = "Rasten är slut! Klicka start för Fokus.";
             }
-
         } else {
-            // RÄKNA NER
             const totalSeconds = Math.floor(timeLeft / 1000);
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
 
             const formattedMin = minutes < 10 ? '0' + minutes : minutes;
             const formattedSec = seconds < 10 ? '0' + seconds : seconds;
+            
+            const timeString = `${formattedMin}:${formattedSec}`;
 
-            timerDisplay.innerText = `${formattedMin}:${formattedSec}`;
+            timerDisplay.innerText = timeString;
+            // Här uppdateras fliken varje sekund med tiden och nuvarande läge!
+            document.title = `${timeString} - ${modeText}`; 
         }
     }, 1000);
 });
