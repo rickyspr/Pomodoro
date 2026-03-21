@@ -9,6 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
 const rooms = {};
+const timers = {}; // Lagra aktiva timers för varje rum
 
 io.on('connection', (socket) => {
   socket.on('join-room', (roomId) => {
@@ -16,29 +17,47 @@ io.on('connection', (socket) => {
     
     // Om rummet är helt nytt, skapa det och sätt första läget till 'focus'
     if (!rooms[roomId]) {
-        rooms[roomId] = { endTime: 0, nextMode: 'focus' };
+        rooms[roomId] = { endTime: 0, nextMode: 'focus', focusDuration: 25, breakDuration: 5 };
     }
 
     // Om timern redan är igång när personen ansluter
     if (rooms[roomId].endTime > Date.now()) {
       // Vi räknar ut vad som körs just nu baserat på vad nästa läge är
       const currentMode = rooms[roomId].nextMode === 'break' ? 'focus' : 'break';
-      socket.emit('timer-started', { endTime: rooms[roomId].endTime, mode: currentMode });
+      socket.emit('timer-started', { 
+        endTime: rooms[roomId].endTime, 
+        mode: currentMode,
+        focusDuration: rooms[roomId].focusDuration,
+        breakDuration: rooms[roomId].breakDuration
+      });
     } else {
       // Om timern står still, berätta för frontend vad som väntar härnäst
-      socket.emit('timer-stopped', rooms[roomId].nextMode);
+      socket.emit('timer-stopped', {
+        nextMode: rooms[roomId].nextMode,
+        focusDuration: rooms[roomId].focusDuration,
+        breakDuration: rooms[roomId].breakDuration
+      });
     }
   });
 
-  socket.on('start-timer', (roomId) => {
-    if (!rooms[roomId]) rooms[roomId] = { endTime: 0, nextMode: 'focus' };
+  socket.on('start-timer', (data) => {
+    const roomId = typeof data === 'string' ? data : data.roomId;
+    if (!rooms[roomId]) rooms[roomId] = { endTime: 0, nextMode: 'focus', focusDuration: 25, breakDuration: 5 };
+    
+    // Uppdatera durationerna om de skickades in
+    if (typeof data === 'object') {
+      rooms[roomId].focusDuration = data.focusDuration || 25;
+      rooms[roomId].breakDuration = data.breakDuration || 5;
+    }
     
     // Förhindra att någon startar en ny timer om den redan är igång
     if (rooms[roomId].endTime > Date.now()) return;
 
     const mode = rooms[roomId].nextMode;
-    // 25 minuter för fokus, 5 minuter för rast
-    const duration = mode === 'focus' ? 25 * 60 * 1000 : 5 * 60 * 1000;
+    // Använd custom-durationerna, eller default-värdena
+    const duration = mode === 'focus' 
+      ? rooms[roomId].focusDuration * 60 * 1000 
+      : rooms[roomId].breakDuration * 60 * 1000;
     const endTime = Date.now() + duration;
     
     rooms[roomId].endTime = endTime;
@@ -46,8 +65,28 @@ io.on('connection', (socket) => {
     // Ändra nästa läge inför nästa knapptryck
     rooms[roomId].nextMode = mode === 'focus' ? 'break' : 'focus';
 
-    // Skicka ut startsignalen OCH vilket läge som just startade
-    io.to(roomId).emit('timer-started', { endTime, mode });
+    // Stäng av eventuell befintlig timer för detta rum
+    if (timers[roomId]) {
+      clearTimeout(timers[roomId]);
+    }
+
+    // Lägg till server-side timer som notifierar när sessionen avslutas
+    timers[roomId] = setTimeout(() => {
+      io.to(roomId).emit('timer-stopped', {
+        nextMode: rooms[roomId].nextMode,
+        focusDuration: rooms[roomId].focusDuration,
+        breakDuration: rooms[roomId].breakDuration
+      });
+      timers[roomId] = null;
+    }, duration);
+
+    // Skicka ut startsignalen med alla detaljer
+    io.to(roomId).emit('timer-started', { 
+      endTime, 
+      mode,
+      focusDuration: rooms[roomId].focusDuration,
+      breakDuration: rooms[roomId].breakDuration
+    });
   });
 });
 

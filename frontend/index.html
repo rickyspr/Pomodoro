@@ -128,6 +128,67 @@
             color: #aaa;
             cursor: not-allowed;
         }
+
+        /* Design för inställningar-sektionen */
+        .settings-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .settings-toggle {
+            background-color: #0f3460;
+            color: white;
+            border: 2px solid #e94560;
+            padding: 10px 15px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .settings-toggle:hover {
+            background-color: #e94560;
+            transform: scale(1.1);
+        }
+
+        .settings-content {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background-color: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            width: 250px;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .settings-content.open {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        .settings-content label {
+            color: #ccc;
+        }
+
+        .settings-content input[type="number"] {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #0f3460;
+            background-color: #0f3460;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -138,6 +199,20 @@
         <input type="text" id="room-input" placeholder="Ange rumnamn (t.ex. grupp1)">
         <button id="join-btn">Gå med</button>
         <span id="current-room-text"></span>
+    </div>
+
+    <div class="settings-container">
+        <button id="settings-toggle" class="settings-toggle">⚙️ Inställningar</button>
+        <div id="settings-content" class="settings-content">
+            <div style="margin-bottom: 15px;">
+                <label for="focus-duration" style="display: block; margin-bottom: 5px; text-align: left;">Fokustid (minuter):</label>
+                <input type="number" id="focus-duration" min="1" max="60" value="25" style="width: 100%;">
+            </div>
+            <div>
+                <label for="break-duration" style="display: block; margin-bottom: 5px; text-align: left;">Rasttid (minuter):</label>
+                <input type="number" id="break-duration" min="1" max="30" value="5" style="width: 100%;">
+            </div>
+        </div>
     </div>
 
     <div class="timer-container">

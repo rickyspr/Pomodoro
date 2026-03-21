@@ -1,4 +1,9 @@
-const socket = io('https://grupp-pomodoro-server.onrender.com');
+// Växla mellan lokal och fjärr-server här
+// För lokal testning: 'http://localhost:3000'
+// För produktion: 'https://grupp-pomodoro-server.onrender.com'
+const SERVER_URL = 'https://grupp-pomodoro-server.onrender.com';
+
+const socket = io(SERVER_URL);
 
 const roomInput = document.getElementById('room-input');
 const joinBtn = document.getElementById('join-btn');
@@ -7,9 +12,15 @@ const timerDisplay = document.getElementById('timer-display');
 const startBtn = document.getElementById('start-btn');
 const modeDisplay = document.getElementById('mode-display');
 const alarmSound = document.getElementById('alarm-sound');
+const focusDurationInput = document.getElementById('focus-duration');
+const breakDurationInput = document.getElementById('break-duration');
+const settingsToggle = document.getElementById('settings-toggle');
+const settingsContent = document.getElementById('settings-content');
 
 let currentRoom = '';
 let timerInterval;
+let currentFocusDuration = 25;
+let currentBreakDuration = 5;
 
 joinBtn.addEventListener('click', () => {
     currentRoom = roomInput.value;
@@ -19,26 +30,46 @@ joinBtn.addEventListener('click', () => {
     }
 });
 
+// Inställningar toggle
+settingsToggle.addEventListener('click', () => {
+    settingsContent.classList.toggle('open');
+});
+
+// Stäng inställningar när man klickar utanför
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.settings-container')) {
+        settingsContent.classList.remove('open');
+    }
+});
+
 startBtn.addEventListener('click', () => {
     if (currentRoom) {
-        socket.emit('start-timer', currentRoom);
+        currentFocusDuration = parseInt(focusDurationInput.value) || 25;
+        currentBreakDuration = parseInt(breakDurationInput.value) || 5;
+        socket.emit('start-timer', {
+            roomId: currentRoom,
+            focusDuration: currentFocusDuration,
+            breakDuration: currentBreakDuration
+        });
     } else {
         alert('Du måste gå med i ett rum först!');
     }
 });
 
-socket.on('timer-stopped', (nextMode) => {
+socket.on('timer-stopped', (data) => {
     clearInterval(timerInterval);
     startBtn.disabled = false;
     
-    if (nextMode === 'focus') {
-        modeDisplay.innerText = "Redo för Fokus (25 min)";
-        timerDisplay.innerText = "25:00";
-        document.title = "25:00 - Redo för Fokus"; // Uppdaterar fliken
+    if (data.nextMode === 'focus') {
+        const minutes = data.focusDuration || 25;
+        modeDisplay.innerText = `Redo för Fokus (${minutes} min)`;
+        timerDisplay.innerText = String(minutes).padStart(2, '0') + ":00";
+        document.title = String(minutes).padStart(2, '0') + ":00 - Redo för Fokus";
     } else {
-        modeDisplay.innerText = "Redo för Rast (5 min)";
-        timerDisplay.innerText = "05:00";
-        document.title = "05:00 - Redo för Rast"; // Uppdaterar fliken
+        const minutes = data.breakDuration || 5;
+        modeDisplay.innerText = `Redo för Rast (${minutes} min)`;
+        timerDisplay.innerText = String(minutes).padStart(2, '0') + ":00";
+        document.title = String(minutes).padStart(2, '0') + ":00 - Redo för Rast";
     }
 });
 
