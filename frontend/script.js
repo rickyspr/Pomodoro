@@ -3,7 +3,14 @@
 // För produktion: 'https://grupp-pomodoro-server.onrender.com'
 const SERVER_URL = 'https://grupp-pomodoro-server.onrender.com';
 
-const socket = io(SERVER_URL);
+const socket = io(SERVER_URL, {
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: Infinity,
+    pingInterval: 5000,  // Ping var 5:e sekund istället för default ~25s
+    pingTimeout: 10000   // Timeout efter 10s utan pong
+});
 
 const roomInput = document.getElementById('room-input');
 const joinBtn = document.getElementById('join-btn');
@@ -21,6 +28,7 @@ let currentRoom = '';
 let timerInterval;
 let currentFocusDuration = 25;
 let currentBreakDuration = 5;
+let keepaliveInterval; // Spåra keepalive-intervallet
 
 joinBtn.addEventListener('click', () => {
     currentRoom = roomInput.value;
@@ -143,4 +151,12 @@ socket.on('reconnect', () => {
         socket.emit('join-room', currentRoom);
         modeDisplay.innerText = '✅ Återansluten!';
     }
+    
+    // Starta keepalive-ping var 10:e minut
+    if (keepaliveInterval) clearInterval(keepaliveInterval);
+    keepaliveInterval = setInterval(() => {
+        if (socket.connected) {
+            socket.emit('keepalive');
+        }
+    }, 600000); // 10 minuter
 });

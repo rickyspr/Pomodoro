@@ -128,6 +128,12 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Hantera keepalive-pings från klienter
+  socket.on('keepalive', () => {
+    // Ingenting att göra, bara bekräfta att vi fick meddelandet
+    // Socket.io kommer automatiskt att pinga tillbaka
+  });
+
   // Spåra när användare disconnectar
   socket.on('disconnect', () => {
     // Vi kan inte direkt veta vilket rum, men detta är ok för cleanup
