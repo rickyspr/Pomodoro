@@ -6,7 +6,12 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+const io = new Server(server, { 
+    cors: { origin: "*", methods: ["GET", "POST"] },
+    pingInterval: 3000,   // Ping var 3:e sekund
+    pingTimeout: 5000,    // Timeout efter 5s
+    transports: ['websocket', 'polling']  // Tillåt både WebSocket och polling
+});
 
 const rooms = {};
 const timers = {}; // Lagra aktiva timers för varje rum

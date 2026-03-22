@@ -8,8 +8,10 @@ const socket = io(SERVER_URL, {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     reconnectionAttempts: Infinity,
-    pingInterval: 5000,  // Ping var 5:e sekund istället för default ~25s
-    pingTimeout: 10000   // Timeout efter 10s utan pong
+    pingInterval: 3000,   // Ping var 3:e sekund (mycket kort för att undvika proxy timeout)
+    pingTimeout: 5000,    // Timeout efter 5s utan pong
+    transports: ['websocket', 'polling'],  // Försök WebSocket först, sedan polling
+    upgrade: true
 });
 
 const roomInput = document.getElementById('room-input');
@@ -80,6 +82,13 @@ socket.on('timer-stopped', (data) => {
         document.title = String(minutes).padStart(2, '0') + ":00 - Redo för Rast";
     }
 });
+
+// Starta keepalive-mekanismen för att undvika proxy timeout
+keepaliveInterval = setInterval(() => {
+    if (socket.connected) {
+        socket.emit('keepalive', { timestamp: Date.now() });
+    }
+}, 300000); // 5 minuter
 
 socket.on('timer-started', (data) => {
     clearInterval(timerInterval);
@@ -152,11 +161,11 @@ socket.on('reconnect', () => {
         modeDisplay.innerText = '✅ Återansluten!';
     }
     
-    // Starta keepalive-ping var 10:e minut
+    // Starta aggressiv keepalive var 5:e minut för att undvika proxy timeout
     if (keepaliveInterval) clearInterval(keepaliveInterval);
     keepaliveInterval = setInterval(() => {
         if (socket.connected) {
-            socket.emit('keepalive');
+            socket.emit('keepalive', { timestamp: Date.now() });
         }
-    }, 600000); // 10 minuter
+    }, 300000); // 5 minuter (mycket kortare än 15-minuters proxy timeout)
 });
