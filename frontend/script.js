@@ -32,6 +32,21 @@ let currentFocusDuration = 25;
 let currentBreakDuration = 5;
 let keepaliveInterval; // Spåra keepalive-intervallet
 
+// Starta keepalive-mekanismen med HTTP-fetch för att undvika Renders 15-minuters sleep
+function startKeepAlive() {
+    if (keepaliveInterval) clearInterval(keepaliveInterval);
+    
+    // Kör ett HTTP-anrop var 10:e minut (600000 ms)
+    keepaliveInterval = setInterval(() => {
+        fetch(`${SERVER_URL}/ping`)
+            .then(response => console.log('Pingad Render-server för att hålla den vaken!'))
+            .catch(error => console.error('Ping misslyckades:', error));
+    }, 600000); 
+}
+
+// Starta keepalive direkt när skriptet laddas
+startKeepAlive();
+
 joinBtn.addEventListener('click', () => {
     currentRoom = roomInput.value;
     if (currentRoom) {
@@ -82,13 +97,6 @@ socket.on('timer-stopped', (data) => {
         document.title = String(minutes).padStart(2, '0') + ":00 - Redo för Rast";
     }
 });
-
-// Starta keepalive-mekanismen för att undvika proxy timeout
-keepaliveInterval = setInterval(() => {
-    if (socket.connected) {
-        socket.emit('keepalive', { timestamp: Date.now() });
-    }
-}, 300000); // 5 minuter
 
 socket.on('timer-started', (data) => {
     clearInterval(timerInterval);
@@ -161,11 +169,6 @@ socket.on('reconnect', () => {
         modeDisplay.innerText = '✅ Återansluten!';
     }
     
-    // Starta aggressiv keepalive var 5:e minut för att undvika proxy timeout
-    if (keepaliveInterval) clearInterval(keepaliveInterval);
-    keepaliveInterval = setInterval(() => {
-        if (socket.connected) {
-            socket.emit('keepalive', { timestamp: Date.now() });
-        }
-    }, 300000); // 5 minuter (mycket kortare än 15-minuters proxy timeout)
+    // Säkerställ att HTTP-keepalive rullar på när vi återansluter
+    startKeepAlive();
 });

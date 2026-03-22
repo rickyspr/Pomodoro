@@ -5,6 +5,11 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
+
+app.get('/ping', (req, res) => {
+    res.status(200).send('pong');
+});
+
 const server = http.createServer(app);
 const io = new Server(server, { 
     cors: { origin: "*", methods: ["GET", "POST"] },
