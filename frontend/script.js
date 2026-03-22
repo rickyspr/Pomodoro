@@ -117,3 +117,30 @@ socket.on('timer-started', (data) => {
         }
     }, 1000);
 });
+
+// Error-handling för server-problem
+socket.on('error', (errorMessage) => {
+    console.error('Server-fel:', errorMessage);
+    startBtn.disabled = false;
+    alert('Serverfel: ' + errorMessage);
+});
+
+// Hantera connection-problem
+socket.on('connect_error', (error) => {
+    console.error('Connection-fel:', error);
+    startBtn.disabled = true;
+    modeDisplay.innerText = '❌ Ingen connection till server';
+});
+
+socket.on('disconnect', () => {
+    clearInterval(timerInterval);
+    startBtn.disabled = true;
+    modeDisplay.innerText = '❌ Frånkopplad från server';
+});
+
+socket.on('reconnect', () => {
+    if (currentRoom) {
+        socket.emit('join-room', currentRoom);
+        modeDisplay.innerText = '✅ Återansluten!';
+    }
+});
