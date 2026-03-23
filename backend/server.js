@@ -14,17 +14,26 @@ app.use(cors());
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-async function getMotivationalQuote(mode) {
-    try {
-        const prompt = mode === 'focus' 
-            ? "Skriv en extremt kort och kraftfull motiverande mening (max 10 ord) för någon som ska börja fokusera på arbete. Svenska."
-            : "Skriv en kort, avslappnad mening (max 10 ord) om att det är viktigt att vila och återhämta sig nu. Svenska.";
-        
-        const result = await model.generateContent(prompt);
-        return result.response.text();
-    } catch (error) {
-        console.error("Gemini fel:", error);
-        return mode === 'focus' ? "Dags att fokusera!" : "Ta en välförtjänt paus.";
+function getMotivationalQuote(mode) {
+    if (mode === 'focus') {
+        const focusQuotes = [
+            "Dags att stänga ute bruset. Fokus!",
+            "Ett steg i taget. Du klarar detta.",
+            "Djupt andetag. Nu kör vi 25 minuter magi.",
+            "Inga distraktioner, bara resultat.",
+            "Nu lägger vi i nästa växel!"
+        ];
+        // Slumpar fram ett av citaten
+        return focusQuotes[Math.floor(Math.random() * focusQuotes.length)];
+    } else {
+        const breakQuotes = [
+            "Bra jobbat! Sträck på dig och hämta vatten.",
+            "Hjärnan behöver vila för att växa. Pausa!",
+            "Släpp skärmen med gott samvete en stund.",
+            "Dags för en välförtjänt bensträckare.",
+            "Andas ut. Du är grym."
+        ];
+        return breakQuotes[Math.floor(Math.random() * breakQuotes.length)];
     }
 }
 
