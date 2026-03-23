@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -9,8 +10,8 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 app.use(cors());
 
-// For Gemnin
-const genAI = new GoogleGenerativeAI("DIN_GEMINI_API_KEY");
+// For Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 async function getMotivationalQuote(mode) {
