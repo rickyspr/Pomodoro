@@ -3,8 +3,29 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
+// For gemini
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
 const app = express();
 app.use(cors());
+
+// For Gemnin
+const genAI = new GoogleGenerativeAI("DIN_GEMINI_API_KEY");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+async function getMotivationalQuote(mode) {
+    try {
+        const prompt = mode === 'focus' 
+            ? "Skriv en extremt kort och kraftfull motiverande mening (max 10 ord) för någon som ska börja fokusera på arbete. Svenska."
+            : "Skriv en kort, avslappnad mening (max 10 ord) om att det är viktigt att vila och återhämta sig nu. Svenska.";
+        
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (error) {
+        console.error("Gemini fel:", error);
+        return mode === 'focus' ? "Dags att fokusera!" : "Ta en välförtjänt paus.";
+    }
+}
 
 app.get('/ping', (req, res) => {
     res.status(200).send('pong');
@@ -75,7 +96,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('start-timer', (data) => {
+  socket.on('start-timer', async (data) => {
     try {
       const roomId = typeof data === 'string' ? data : data.roomId;
       if (!rooms[roomId]) {
@@ -93,6 +114,10 @@ io.on('connection', (socket) => {
       if (rooms[roomId].endTime > Date.now()) return;
 
       const mode = rooms[roomId].nextMode;
+
+      // Hämtar en motiverande mening från Gemini baserat på det aktuella läget
+      const motivation = await getMotivationalQuote(mode);
+
       // Använd custom-durationerna, eller default-värdena
       const duration = mode === 'focus' 
         ? rooms[roomId].focusDuration * 60 * 1000 
@@ -120,6 +145,15 @@ io.on('connection', (socket) => {
             breakDuration: rooms[roomId].breakDuration
           });
           timers[roomId] = null;
+
+          // For gemini
+          io.to(roomId).emit('timer-started', { 
+            endTime, 
+            mode,
+            motivation, // Denna läser du av i frontend
+            focusDuration: rooms[roomId].focusDuration,
+            breakDuration: rooms[roomId].breakDuration
+          });
         } catch (error) {
           console.error('Fel när timer stoppades för rum', roomId, ':', error);
         }
