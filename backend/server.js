@@ -136,7 +136,6 @@ io.on('connection', (socket) => {
       }
 
       // Lägg till server-side timer som notifierar när sessionen avslutas
-      // MaxTimeout i JavaScript är ca 24.8 dagar, så begränsa till något rimligare
       const timeoutDuration = Math.min(duration, 2147483647); // Max safe timeout
       timers[roomId] = setTimeout(() => {
         try {
@@ -146,24 +145,17 @@ io.on('connection', (socket) => {
             breakDuration: rooms[roomId].breakDuration
           });
           timers[roomId] = null;
-
-          // For gemini
-          io.to(roomId).emit('timer-started', { 
-            endTime, 
-            mode,
-            motivation, // Denna läser du av i frontend
-            focusDuration: rooms[roomId].focusDuration,
-            breakDuration: rooms[roomId].breakDuration
-          });
+          // OBS: Jag tog bort den felplacerade timer-started härifrån!
         } catch (error) {
           console.error('Fel när timer stoppades för rum', roomId, ':', error);
         }
       }, timeoutDuration);
 
-      // Skicka ut startsignalen med alla detaljer
+      // Skicka ut startsignalen med alla detaljer (Nu MED motivation!)
       io.to(roomId).emit('timer-started', { 
         endTime, 
         mode,
+        motivation, // <-- HÄR LADE JAG TILL CITATET!
         focusDuration: rooms[roomId].focusDuration,
         breakDuration: rooms[roomId].breakDuration
       });
