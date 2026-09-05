@@ -51,32 +51,81 @@ const io = new Server(server, {
 
 const rooms = {};
 const timers = {}; // Lagra aktiva timers för varje rum
-const roomUsers = {}; // Spåra hur många användare i varje rum
+const roomUsers = {}; // Spåra hur många användare i varje rum (antal)
+const roomMembers = {}; // roomId -> Map<socket.id, { name, joinedAt }>
+
+// Härled initialer ur ett namn: "Maja K" -> "MK", "Räv" -> "RÄ"
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '??';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Skicka ut aktuell deltagarlista till alla i rummet (host = först in)
+function broadcastRoster(roomId) {
+  const members = roomMembers[roomId];
+  if (!members) return;
+  const users = [...members.values()]
+    .sort((a, b) => a.joinedAt - b.joinedAt)
+    .map((u, i) => ({ name: u.name, initials: initialsOf(u.name), host: i === 0 }));
+  io.to(roomId).emit('room-users', users);
+}
+
+// Ta bort en socket ur ett rum och uppdatera listan
+function removeFromRoom(socket, roomId) {
+  const members = roomMembers[roomId];
+  if (!members || !members.has(socket.id)) return;
+  members.delete(socket.id);
+  socket.leave(roomId);
+  roomUsers[roomId] = members.size;
+  broadcastRoster(roomId);
+}
 
 // Rensa gamla rum var 10:e minut
 setInterval(() => {
   const now = Date.now();
   Object.keys(rooms).forEach(roomId => {
     // Ta bort rum som är tomma och timern är klar för länge sedan
-    if ((!roomUsers[roomId] || roomUsers[roomId] === 0) && rooms[roomId].endTime + 3600000 < now) {
+    const memberCount = roomMembers[roomId] ? roomMembers[roomId].size : 0;
+    if (memberCount === 0 && rooms[roomId].endTime + 3600000 < now) {
       if (timers[roomId]) clearTimeout(timers[roomId]);
       delete rooms[roomId];
       delete timers[roomId];
       delete roomUsers[roomId];
+      delete roomMembers[roomId];
       console.log(`Rensade upp rum: ${roomId}`);
     }
   });
 }, 600000); // 10 minuter
 
 io.on('connection', (socket) => {
-  socket.on('join-room', (roomId) => {
+  socket.on('join-room', (payload) => {
     try {
+      const roomId = typeof payload === 'string' ? payload : (payload && payload.roomId);
+      if (!roomId) return;
+      const name = (payload && typeof payload === 'object' && payload.name)
+        ? (String(payload.name).slice(0, 40).trim() || 'Gäst')
+        : 'Gäst';
+
+      // Lämna ev. tidigare rum (om man byter rum på samma flik)
+      if (socket.data.roomId && socket.data.roomId !== roomId) {
+        removeFromRoom(socket, socket.data.roomId);
+      }
+
       socket.join(roomId);
-      
-      // Spåra användare
-      if (!roomUsers[roomId]) roomUsers[roomId] = 0;
-      roomUsers[roomId]++;
-      
+      socket.data.roomId = roomId;
+      socket.data.name = name;
+
+      // Spåra deltagare
+      if (!roomMembers[roomId]) roomMembers[roomId] = new Map();
+      const existing = roomMembers[roomId].get(socket.id);
+      roomMembers[roomId].set(socket.id, {
+        name,
+        joinedAt: existing ? existing.joinedAt : Date.now()
+      });
+      roomUsers[roomId] = roomMembers[roomId].size;
+
       // Om rummet är helt nytt, skapa det och sätt första läget till 'focus'
       if (!rooms[roomId]) {
           rooms[roomId] = { endTime: 0, nextMode: 'focus', focusDuration: 25, breakDuration: 5 };
@@ -100,6 +149,9 @@ io.on('connection', (socket) => {
           breakDuration: rooms[roomId].breakDuration
         });
       }
+
+      // Uppdatera deltagarlistan för alla i rummet
+      broadcastRoster(roomId);
     } catch (error) {
       console.error('Fel i join-room:', error);
       socket.emit('error', 'Kunde inte gå med i rummet');
@@ -111,7 +163,8 @@ io.on('connection', (socket) => {
       const roomId = typeof data === 'string' ? data : data.roomId;
       if (!rooms[roomId]) {
         rooms[roomId] = { endTime: 0, nextMode: 'focus', focusDuration: 25, breakDuration: 5 };
-        roomUsers[roomId] = 0;
+        if (!roomMembers[roomId]) roomMembers[roomId] = new Map();
+        roomUsers[roomId] = roomMembers[roomId].size;
       }
       
       // Uppdatera durationerna om de skickades in
@@ -180,14 +233,28 @@ io.on('connection', (socket) => {
     // Socket.io kommer automatiskt att pinga tillbaka
   });
 
+  // Byt visningsnamn (från inställningspanelen)
+  socket.on('update-name', (newName) => {
+    const roomId = socket.data.roomId;
+    const name = String(newName || '').slice(0, 40).trim() || 'Gäst';
+    socket.data.name = name;
+    if (roomId && roomMembers[roomId] && roomMembers[roomId].has(socket.id)) {
+      roomMembers[roomId].get(socket.id).name = name;
+      broadcastRoster(roomId);
+    }
+  });
+
   // Spåra när användare disconnectar
   socket.on('disconnect', () => {
-    // Vi kan inte direkt veta vilket rum, men detta är ok för cleanup
-    Object.keys(roomUsers).forEach(roomId => {
-      if (roomUsers[roomId] > 0) {
-        roomUsers[roomId]--;
-      }
-    });
+    const roomId = socket.data.roomId;
+    if (roomId && roomMembers[roomId] && roomMembers[roomId].has(socket.id)) {
+      removeFromRoom(socket, roomId);
+    } else {
+      // Fallback: leta upp socketen i alla rum
+      Object.keys(roomMembers).forEach(rid => {
+        if (roomMembers[rid].has(socket.id)) removeFromRoom(socket, rid);
+      });
+    }
   });
 });
 
